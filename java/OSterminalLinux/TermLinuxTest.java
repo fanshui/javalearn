@@ -67,7 +67,7 @@ public class TermLinuxTest {
             String s = null;
 
 
-            /*子进程输出给父进程一个错误流*/
+            /*子进程输出给父进程一个错误流 */
             InputStream ise = process.getErrorStream();
             BufferedReader bre = new BufferedReader(new InputStreamReader(ise));
             while ((s = bre.readLine()) != null) {
