@@ -57,7 +57,7 @@ public class TermLinuxTest {
 则可能导致子进程阻塞，甚至产生死锁
      */
 
-
+ //改好了
     //Runtime Proccess
     public static String cmd1(String cmd) {
         try {
