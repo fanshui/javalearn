@@ -1,4 +1,4 @@
-package thread;
+package thread.basic;
 
 /*
 Java中 线程只有： 等待状态   可运行状态
@@ -9,8 +9,6 @@ notify() ：唤醒当前对象上的等待线程
 notifyAll() :
 
  */
-
-import java.util.Scanner;
 
 class Thread_A extends Thread{
     int num;

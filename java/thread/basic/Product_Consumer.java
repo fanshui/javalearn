@@ -1,4 +1,4 @@
-package thread;
+package thread.basic;
 
 /**
  * Created by fanghui on 2017/11/6.
