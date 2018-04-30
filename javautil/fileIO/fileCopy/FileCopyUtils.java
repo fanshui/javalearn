@@ -18,15 +18,8 @@ public class FileCopyUtils {
      */
     public static void copyfile(File fromFile,File toFile,Boolean rewrite) {
 
-        if (!fromFile.exists()) {
-            return;
-        }
-        if (!fromFile.isFile()) {
-            return;
-        }
-        if (!fromFile.canRead()) {
-            return;
-        }
+        if (!canCopy(fromFile)) return;
+
         if (!toFile.getParentFile().exists()) {
             toFile.getParentFile().mkdirs();
         }
@@ -45,8 +38,6 @@ public class FileCopyUtils {
 
             fosfrom.close();
             fosto.close();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -55,8 +46,9 @@ public class FileCopyUtils {
 
 
 
+
     /**
-     *
+     *单线程文件复制
      * @param source 被复制的文件
      * @param target 复制到
      *
@@ -64,6 +56,7 @@ public class FileCopyUtils {
      * <p>不考虑多线程优化，单线程文件复制最快的方法是(文件越大该方法越有优势，一般比常用方法快30+%</p>
      */
     public static void nioTransferCopy(File source, File target)  {
+        if (!canCopy(source)) return;
         FileChannel in = null;
         FileChannel out = null;
         FileInputStream inStream = null;
@@ -77,29 +70,24 @@ public class FileCopyUtils {
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
-            try {
-                inStream.close();
-                in.close();
-                outStream.close();
-                out.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
+            close(in,out,inStream,outStream);
         }
     }
 
 
     /**
-     *
+     * 文件复制  可通过buffer监测复制进度
      * @param source 被复制的文件
      * @param target 目标文件
      * @param capacity buffer大小(4096)
      *
+     *<p>如果需要监测复制进度，可以用第二快的方法(留意buffer的大小，对速度有很大影响)</p>
      *  <p>使用nio channel buffer</p>
-     *  <p>如果需要监测复制进度，可以用第二快的方法(留意buffer的大小，对速度有很大影响)</p>
+     *
      */
     public static void nioBufferCopy(File source, File target, int capacity)  {
+        if (!canCopy(source)) return;
+
         FileChannel in = null;
         FileChannel out = null;
         FileInputStream inStream = null;
@@ -110,47 +98,104 @@ public class FileCopyUtils {
             in = inStream.getChannel();
             out = outStream.getChannel();
             ByteBuffer buffer = ByteBuffer.allocate(capacity);
-            while (in.read(buffer) != -1) {
+            buffer.clear();
+//            int count = 0;
+            while (in.read(buffer) >= 0 || buffer.position() != 0) {
                 buffer.flip();
                 out.write(buffer);
-                buffer.clear();
+//                System.out.println(buffer.toString());
+//                System.out.println("This is " + count++ + "th " + "byte[" + capacity + "]");
+                buffer.compact();
             }
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
-            try {
-                out.close();
-                in.close();
-                outStream.close();
-                inStream.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            close(in, out, inStream, outStream);
 
         }
     }
 
 
+    /**
+     * 多线程复制单个文件
+     * @param source 源文件
+     * @param target  目标文件
+     * @param numOfThread 线程数量
+     */
+    public static void mtTransferCopySingleFile(File source, File target, int numOfThread) {
+
+        if(!canCopy(source))
+            return;
+        long len = source.length();
+        long lenOfEveryTh = len / numOfThread;
+        for(int i = 0; i < numOfThread - 1; i++) {
+            Thread t = new Thread(new MultThreadCopySingleFileRunnable(source,target,lenOfEveryTh * i, lenOfEveryTh * (i + 1)),
+                    i + "th CopyThread");
+            t.start();
+        }
+        Thread ct = new Thread(new MultThreadCopySingleFileRunnable(source,target,lenOfEveryTh * (numOfThread - 1),len));
+        ct.start();
+    }
 
 
+    /**
+     * 多线程复制多个文件 ，其中每个线程复制一个文件
+     * @param sources 源文件数组
+     * @param targetDir 目标目录
+     */
+    public static void mtTransferCopyMultiFiles(File[] sources,File targetDir) {
 
+        for (File source : sources) {
+            if(!canCopy(source))
+                return;
+        }
+        if (!targetDir.exists() || !targetDir.isDirectory())
+            return;
 
-
-
-
-
-
-
-
-    public static void main(String[] args) {
-
-        File from = new File("C:\\fh\\javalearn\\testfile\\a.txt");
-        File to = new File("C:\\fh\\javalearn\\testfile\\d.txt");
-        nioBufferCopy(from, to, 4096);
+        for(int i = 0; i < sources.length; i++) {
+            Thread t = new Thread(new SimpleFileCopyRunnable(sources[i],new File(targetDir,sources[i].getName())),
+                    sources[i].getName() + " copy thread");
+            t.start();
+        }
 
     }
 
 
 
+
+    public static void close(FileChannel in, FileChannel out, FileInputStream inStream, FileOutputStream outStream) {
+        try {
+            if (out != null) out.close();
+            if (in != null)in.close();
+            if (outStream != null)outStream.close();
+            if (inStream != null)inStream.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void close(FileChannel in, FileChannel out, RandomAccessFile inStream, RandomAccessFile outStream) {
+        try {
+            if (out != null) out.close();
+            if (in != null)in.close();
+            if (outStream != null)outStream.close();
+            if (inStream != null)inStream.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static boolean canCopy(File fromFile) {
+        if (!fromFile.exists()) {
+            return false;
+        }
+        if (!fromFile.isFile()) {
+            return false;
+        }
+        if (!fromFile.canRead()) {
+            return false;
+        }
+        return true;
+    }
 
 }
