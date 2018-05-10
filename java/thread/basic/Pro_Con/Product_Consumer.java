@@ -8,9 +8,12 @@ public class Product_Consumer {
         Container con = new Container(5);//箱子最大容量
 
         Producer producer = new Producer(con);
-        Consumer consumer = new Consumer(con);
+        Consumer consumer1 = new Consumer(con);
+        Consumer consumer2 = new Consumer(con);
+
         new Thread(producer,"producer").start();
-        new Thread(consumer,"consumer").start();
+        new Thread(consumer1,"consumer1").start();
+        new Thread(consumer2,"consumer2").start();
     }
 }
 
@@ -27,7 +30,7 @@ class Container{
             wait();
         }
         currentNum ++;
-        System.out.println("生产者生产...." + currentNum);
+        System.out.println(Thread.currentThread().getName() + " 生产者生产...." + currentNum);
         notify();
     }
 
@@ -36,7 +39,7 @@ class Container{
             wait();
         }
         currentNum --;
-        System.out.println("消费者消费...." + currentNum);
+        System.out.println(Thread.currentThread().getName() + " 消费者消费...." + currentNum);
         notify();
     }
 
@@ -59,7 +62,7 @@ class Producer implements Runnable{
             }
 
             try {
-                Thread.sleep(100);
+                Thread.sleep(1000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -82,7 +85,7 @@ class Consumer implements Runnable{
                 e.printStackTrace();
             }
             try {
-                Thread.sleep(500);
+                Thread.sleep(5000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
